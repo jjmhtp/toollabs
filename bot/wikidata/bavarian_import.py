@@ -41,7 +41,7 @@ def getBavarianGenerator():
     session = requests.Session()
 
     # Just loop over the pages
-    for i in range(1, 368):
+    for i in [190]: # range(1, 368): # TODO: testing with one page
         print i
         searchurl = basesearchurl % (i,)
         print searchurl
@@ -52,7 +52,7 @@ def getBavarianGenerator():
                                                       #'origin' : origin} )
         #print searchPage.text
         searchJson = searchPage.json()
-        for record in searchJson.get('items'):
+        for record in searchJson.get('items')[:2]: # TODO: just one for now
             metadata = {}
             # ID is not the inventory number!
             url = record.get(u'url').replace(u'sammlung.pinakothek.de/de/artist/', u'sammlung.pinakothek.de/en/artist/')
@@ -99,8 +99,12 @@ def getBavarianGenerator():
             #locations = { u'Nicht ausgestellt' : u'Q123',
             #              }
             #
-            #locationregex = u'\<div class\=\"label-header\"\>[\s\t\r\n]*Ausgestellt[\s\t\r\n]*\<\/div\>[\s\t\r\n]*([^\<]+)[\s\t\r\n]*\<\/div\>'
-            #locationmatch = re.search(locationregex, itempage.text)
+            # locationregex = u'\<div class\=\"label-header\"\>[\s\t\r\n]*Ausgestellt[\s\t\r\n]*\<\/div\>(\<a href\=\"[^\>]*\"\>)[\s\t\r\n]*([^\<]+)[\s\t\r\n]*\<\/div\>' # Multichill
+            locationregex = u'\<div class\=\"label-header\"\>[\s\t\r\n]*Displayed[\s\t\r\n]*\<\/div\>[\s\t\r\n]*(\<a href\=\"([^\>]*)\"\>)?[\s\t\r\n]*([^\<]+)[\s\t\r\n]*(\<\/a\>)?[\s\t\r\n]*\<\/div\>'
+            locationmatch = re.search(locationregex, itempage.text)
+            print ("url: " + str(locationmatch.group(2)) + "\nlabel: " + str(locationmatch.group(3)))
+            if locationmatch.group(3).strip() == u'Not on display':
+                metadata['locationqid'] = u'Q29343881'
 
             # If the origin starts with a year, we'll take that
             acquisitiondateregex = u'\<div class\=\"label-header\"\>[\s\t\r\n]*Origin[\s\t\r\n]*\<\/div\>[\s\t\r\n]*(\d\d\d\d)[^\<]+[\s\t\r\n]*\<\/div\>'
@@ -108,9 +112,10 @@ def getBavarianGenerator():
             if acquisitiondatematch:
                 metadata['acquisitiondate'] = acquisitiondatematch.group(1)
 
-            mediumregex = u'\<div class\=\"label-header\"\>[\s\t\r\n]*Material / Technology / Carrier[\s\t\r\n]*\<\/div\>[\s\t\r\n]*Öl auf Leinwand[\s\t\r\n]*\<\/div\>'
+            mediumregex = u'\<div class\=\"label-header\"\>[\s\t\r\n]*Material / Technology / Carrier[\s\t\r\n]*\<\/div\>[\s\t\r\n]*([^\<\>]*)[\s\t\r\n]*\<\/div\>'
             mediummatch = re.search(mediumregex, itempage.text)
-            if mediummatch:
+            print (u'medium: ' + mediummatch.group(1))
+            if mediummatch.group(1) == u'Öl auf Leinwand':
                 metadata['medium'] = u'oil on canvas'
 
             measurementsregex = u'\<div class\=\"label-header\"\>[\s\t\r\n]*Dimensions of the object[\s\t\r\n]*\<\/div\>[\s\t\r\n]*([^\<]+)[\s\t\r\n]*\<\/div\>'
@@ -133,6 +138,8 @@ def getBavarianGenerator():
             permalinkmatch = re.search(permalinkregex, itempage.text)
             if permalinkmatch:
                 metadata[u'describedbyurl'] = permalinkmatch.group(1)
+
+            print metadata # TODO: just for testing
 
             yield metadata
 
